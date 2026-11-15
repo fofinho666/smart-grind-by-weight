@@ -9,12 +9,13 @@ CELL_L, CELL_W, CELL_H = 70.0, 15.0, 22.0   # T70 as modelled in the repo
 HOLE_END, HOLE_PITCH   = 6.0, 7.0           # M3 pair: 6 mm from each end, 7 mm apart
 SEAT_Y0, SEAT_Z0       = -74.0, -190.0      # stock seat: rear end of cell, underside of cell
 SEAT_HOLE_Y            = -80.0
-PF_Y                   = -114.5             # basket centre (same as the stock cup centre)
+PF_Y                   = -117.0             # basket centre (stock cup centre is -114.5; moved forward so a 72 mm head clears the cover)
 PF_R                   = 36.5               # head radius + 0.5 (58 mm portafilter heads are ~70-72 mm OD)
 BASKET_GAP             = 61.5               # clear width between prongs (basket / bowl passes through)
-LEDGE_Z                = -103.0             # underside of the portafilter head rests here
+LEDGE_Z                = -105.0             # underside of the portafilter head rests here
 HEAD_H                 = 23.0               # YOUR portafilter: underside of the head -> top of the rim
-LIP_PLAY               = 1.0                # air between the rim and the hold-down lips
+LIP_PLAY               = 1.5                # air between the rim and the hold-down bridge
+EAR_R                  = 42.5               # nothing may sit inside this radius at ear height (ears reach ~41 mm)
 SEAT_D                 = 1.5                # depth of the seat pocket that stops the head sliding forward
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
 CORNER_R               = 3.0
@@ -73,10 +74,13 @@ BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # -163 .. -153
 PRONG_XI = BASKET_GAP/2                           # 30.75
 PLATE_XI, PLATE_XO = 34.0, 43.0
 PRONG_T  = 5.0
-PRONG_Y0, PRONG_Y1 = PF_Y - 26.0, -82.0           # front tip / rear end
+PRONG_Y0, PRONG_Y1 = PF_Y - 26.0, PF_Y + 32.5           # front tip / rear end
 UP_Y0, UP_Y1 = TRAY_Y0, TRAY_Y0 + 16.0            # upright foot on the bar
-LIP_Z0 = LEDGE_Z + HEAD_H + LIP_PLAY              # flat underside of the hold-down lips
-POST_TOP = LIP_Z0 + 4.0
+LIP_Z0 = LEDGE_Z + HEAD_H + LIP_PLAY              # flat underside of the hold-down bridge
+BRIDGE_T = 3.5
+POST_TOP = LIP_Z0 + BRIDGE_T
+STOP_H = 8.0                                      # rear stop pads stay below ear height
+POST_Y0, BRIDGE_Y0, BRIDGE_Y1 = PF_Y + 25.5, PF_Y + 26.5, PF_Y + 30.5
 
 def side_plate():
     zt, zb = LEDGE_Z, LEDGE_Z - PRONG_T
@@ -88,14 +92,14 @@ def side_plate():
     # seat pocket: the front half of the prong is SEAT_D higher, with a round pocket the head drops into
     rim = box(PRONG_XI, PLATE_XO, PRONG_Y0, PF_Y, zt, zt+SEAT_D)
     plate = plate.union(rim.cut(cq.Workplane('XY').circle(PF_R).extrude(SEAT_D+2).translate((0, PF_Y, zt-1))))
-    # rear post: back-stop pad + hold-down lip, shaped by a revolved cutter around the basket axis
-    px0, py0 = 24.0, -94.0
-    post = box(px0, PLATE_XO, py0, PRONG_Y1, LEDGE_Z, POST_TOP)
+    # rear post: stands outside the ear radius, so ears can sit at any angle
+    post = box(PLATE_XI, PLATE_XO, POST_Y0, PRONG_Y1, LEDGE_Z, POST_TOP)
+    # low back-stop pad (below ear height), shaped to the head radius
+    px0, py0 = 24.0, PF_Y + 20.5
+    pad = box(px0, PLATE_XI+1, py0, PRONG_Y1, LEDGE_Z, LEDGE_Z+STOP_H)
     wedge = prism_xz([(PRONG_XI, zt), (px0, zt), (PRONG_XI, zt-(PRONG_XI-px0))], py0, PRONG_Y1)
-    # flat lip underside (pushes straight down, no outward wedge); 1 mm root chamfer keeps the overhang short
-    prof = [(0, LEDGE_Z-12), (PF_R, LEDGE_Z-12), (PF_R, LIP_Z0-1.0), (PF_R-1.0, LIP_Z0), (PF_R-3.5, LIP_Z0), (PF_R-3.5, POST_TOP+1), (0, POST_TOP+1)]
-    cutter = cq.Workplane("XZ").polyline(prof).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0))
-    post = post.union(wedge).cut(cutter)
+    head = cq.Workplane("XY").circle(PF_R).extrude(STOP_H+14).translate((0, PF_Y, LEDGE_Z-12))
+    post = post.union(pad.union(wedge).cut(head))
     return plate.union(post)
 
 def yoke():
@@ -106,7 +110,9 @@ def yoke():
         bar = bar.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
         bar = bar.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-5.5, BAR_Z1+1, M3_CBORE))
     sp = side_plate()
-    return bar.union(sp).union(sp.mirror("YZ"))
+    # hold-down bridge: a flat beam above the rear of the rim, joining the two posts
+    bridge = box(-PLATE_XO, PLATE_XO, BRIDGE_Y0, BRIDGE_Y1, LIP_Z0, POST_TOP)
+    return bar.union(sp).union(sp.mirror("YZ")).union(bridge)
 
 def load_cell():      # reference only
     c = box(-CELL_L/2, CELL_L/2, CELL_Y0, CELL_Y1, CELL_Z0, CELL_Z1)
@@ -115,10 +121,11 @@ def load_cell():      # reference only
             c = c.cut(vcyl(sx, CELL_YC+dy, CELL_Z0-1, CELL_Z1+1, 2.5))
     return c
 
+EAR_ANGLE = 0.0
 def portafilter():    # reference only: 72 mm head, 23 mm tall, basket below, 2 ears, handle stub
     h = cq.Workplane("XY").circle(36).extrude(HEAD_H).translate((0, PF_Y, LEDGE_Z))
     b = cq.Workplane("XY").circle(30).extrude(14).translate((0, PF_Y, LEDGE_Z-14))
-    ears = box(-41, 41, PF_Y-9, PF_Y+9, LEDGE_Z+14, LEDGE_Z+20)
+    ears = box(-41, 41, PF_Y-9, PF_Y+9, LEDGE_Z+14, LEDGE_Z+20).rotate((0, PF_Y, 0), (0, PF_Y, 1), EAR_ANGLE)
     handle = box(-11, 11, PF_Y-90, PF_Y-30, LEDGE_Z+2, LEDGE_Z+20)
     return h.union(b).union(ears).union(handle)
 
