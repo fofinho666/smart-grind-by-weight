@@ -18,7 +18,9 @@ LIP_PLAY               = 1.5                # air between the rim and the hold-d
 EAR_R                  = 42.5               # nothing may sit inside this radius at ear height (ears reach ~41 mm)
 SEAT_D                 = 1.5                # depth of the seat pocket that stops the head sliding forward
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
-CORNER_R               = 3.0
+CORNER_R               = 6.0                # plan-view corner radius of the load cell box
+FOOT_CHAMFER           = 0.6                # bed-side edge break
+ARC_R_FRONT, ARC_R_REAR = 24.0, 30.0        # sweep radii of the side plates
 
 # derived layout of the sideways cell
 TRAY_Z0   = SEAT_Z0                 # tray bottom flush with stub bottom (prints flat)
@@ -53,7 +55,8 @@ def prism_yz(pts, x0, x1):          # polygon in (y,z), extruded along x
 def cross_mount():
     stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
     tray = box(-TRAY_XO, TRAY_XO, TRAY_Y0, TRAY_Y1, TRAY_Z0, TRAY_Z1).edges('|Z').fillet(CORNER_R)
-    cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1)
+    tray = tray.faces('<Z').edges().chamfer(FOOT_CHAMFER)
+    cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
     pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
     a = tray.cut(cav).union(pad).union(stub)
     # fixed-end screws, from below into the cell's threaded holes
@@ -75,23 +78,36 @@ PRONG_XI = BASKET_GAP/2                           # 30.75
 PLATE_XI, PLATE_XO = 34.0, 43.0
 PRONG_T  = 5.0
 PRONG_Y0, PRONG_Y1 = PF_Y - 26.0, PF_Y + 32.5           # front tip / rear end
-UP_Y0, UP_Y1 = TRAY_Y0, TRAY_Y0 + 16.0            # upright foot on the bar
+UP_Y0, UP_Y1 = TRAY_Y0 + CORNER_R, TRAY_Y1 - CORNER_R   # upright foot, on the straight part of the bar edge
 LIP_Z0 = LEDGE_Z + HEAD_H + LIP_PLAY              # flat underside of the hold-down bridge
 BRIDGE_T = 3.5
 POST_TOP = LIP_Z0 + BRIDGE_T
 STOP_H = 8.0                                      # rear stop pads stay below ear height
 POST_Y0, BRIDGE_Y0, BRIDGE_Y1 = PF_Y + 25.5, PF_Y + 26.5, PF_Y + 30.5
 
+def swept_profile(zt, zb):
+    """Side view (y,z) of a side plate: upright foot, two arcs that sweep out to the prong tips
+    (never steeper than 45 degrees, so it prints without supports), raised seat rim at the front."""
+    import math
+    c, s_ = 1 - math.cos(math.radians(45)), math.sin(math.radians(45))
+    m, n_ = 1 - math.cos(math.radians(22.5)), math.sin(math.radians(22.5))
+    rf, rr = ARC_R_FRONT, ARC_R_REAR
+    zf = zb - rf*s_ - ((UP_Y0 - PRONG_Y0) - rf*c)      # where the front arc leaves the upright
+    zr = zb - rr*s_ - ((PRONG_Y1 - UP_Y1) - rr*c)      # where the rear arc leaves the upright
+    top, tip = zt + SEAT_D, 3.0
+    w = cq.Workplane("YZ").moveTo(UP_Y0, BAR_Z1-1).lineTo(UP_Y1, BAR_Z1-1).lineTo(UP_Y1, zr)
+    w = w.threePointArc((UP_Y1 + rr*m, zr + rr*n_), (UP_Y1 + rr*c, zr + rr*s_)).lineTo(PRONG_Y1, zb)
+    w = w.lineTo(PRONG_Y1, zt).lineTo(PF_Y, zt).lineTo(PF_Y, top).lineTo(PRONG_Y0 + tip, top)
+    w = w.threePointArc((PRONG_Y0 + tip*(1-s_), top - tip*c), (PRONG_Y0, top - tip)).lineTo(PRONG_Y0, zb)
+    w = w.lineTo(UP_Y0 - rf*c, zf + rf*s_).threePointArc((UP_Y0 - rf*m, zf + rf*n_), (UP_Y0, zf))
+    return w.close()
+
 def side_plate():
     zt, zb = LEDGE_Z, LEDGE_Z - PRONG_T
     xz = [(PLATE_XO, BAR_Z1-1), (PLATE_XI, BAR_Z1-1), (PLATE_XI, zb-(PLATE_XI-PRONG_XI)),
-          (PRONG_XI, zb), (PRONG_XI, zt), (PLATE_XO, zt)]
-    yz = [(UP_Y0, BAR_Z1-1), (UP_Y1, BAR_Z1-1), (UP_Y1, zb-(PRONG_Y1-UP_Y1)), (PRONG_Y1, zb),
-          (PRONG_Y1, zt), (PRONG_Y0, zt), (PRONG_Y0, zb), (UP_Y0, zb-(UP_Y0-PRONG_Y0))]
-    plate = prism_xz(xz, PRONG_Y0, PRONG_Y1).intersect(prism_yz(yz, 0, PLATE_XO+1))
-    # seat pocket: the front half of the prong is SEAT_D higher, with a round pocket the head drops into
-    rim = box(PRONG_XI, PLATE_XO, PRONG_Y0, PF_Y, zt, zt+SEAT_D)
-    plate = plate.union(rim.cut(cq.Workplane('XY').circle(PF_R).extrude(SEAT_D+2).translate((0, PF_Y, zt-1))))
+          (PRONG_XI, zb), (PRONG_XI, zt+SEAT_D), (PLATE_XO, zt+SEAT_D)]
+    plate = prism_xz(xz, PRONG_Y0, PRONG_Y1).intersect(swept_profile(zt, zb).extrude(PLATE_XO+1))
+    plate = plate.cut(cq.Workplane('XY').circle(PF_R).extrude(SEAT_D+2).translate((0, PF_Y, zt)))
     # rear post: stands outside the ear radius, so ears can sit at any angle
     post = box(PLATE_XI, PLATE_XO, POST_Y0, PRONG_Y1, LEDGE_Z, POST_TOP)
     # low back-stop pad (below ear height), shaped to the head radius
@@ -104,6 +120,7 @@ def side_plate():
 
 def yoke():
     bar = box(-TRAY_XO, TRAY_XO, TRAY_Y0, TRAY_Y1, BAR_Z0, BAR_Z1).edges('|Z').fillet(CORNER_R)
+    bar = bar.faces('<Z').edges().chamfer(FOOT_CHAMFER)
     # relief: the bar only touches the cell over the free end
     bar = bar.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
@@ -111,7 +128,7 @@ def yoke():
         bar = bar.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-5.5, BAR_Z1+1, M3_CBORE))
     sp = side_plate()
     # hold-down bridge: a flat beam above the rear of the rim, joining the two posts
-    bridge = box(-PLATE_XO, PLATE_XO, BRIDGE_Y0, BRIDGE_Y1, LIP_Z0, POST_TOP)
+    bridge = box(-PLATE_XO, PLATE_XO, BRIDGE_Y0, BRIDGE_Y1, LIP_Z0, POST_TOP).edges('|X').edges('>Z').fillet(1.2)
     return bar.union(sp).union(sp.mirror("YZ")).union(bridge)
 
 def load_cell():      # reference only
