@@ -2,7 +2,7 @@
 Coordinates = the repo's Fusion assembly frame, mm: x across the grinder (0 = centreline),
 y front/back (grinder front face at y = -63.25, more negative = toward you), z up.
 Stock load cell seat (back plate): cell 70 x 15 x 22, z -190..-168, fixed-end M3 holes at y = -80, x = +-3.5."""
-import cadquery as cq, math, os
+import cadquery as cq, os
 
 # ---- parameters -------------------------------------------------------------
 CELL_L, CELL_W, CELL_H = 70.0, 15.0, 22.0   # T70 as modelled in the repo
@@ -17,7 +17,6 @@ HEAD_H                 = 23.0               # reference portafilter only (not us
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
 CORNER_R               = 6.0                # plan-view corner radius of the load cell box
 FOOT_CHAMFER           = 0.6                # bed-side edge break
-CHIN_DEG               = 35.0               # draft of the cross mount's front face (0 = vertical, max 45 without supports)
 
 # derived layout of the sideways cell
 TRAY_Z0   = SEAT_Z0                 # tray bottom flush with stub bottom (prints flat)
@@ -59,37 +58,40 @@ TOP_Z    = LEDGE_Z + 1.0                          # top face of the cradle
 POCKET_D = 3.0                                    # straight wall above the funnel
 ROOF_Z   = TOP_Z - 22.0                           # underside starts closing in here, at 45 degrees
 FRONT_Y  = PF_Y - 32.0                            # cradle is cut flat here (front support line)
+HULL_Z0, HULL_Z1 = TRAY_Z0, -135.0                # the front draws in below HULL_Z1 ...
+HULL_B0  = 16.0                                   # ... to this depth in front of the basket axis at the bottom
 NECK_W, WINDOW_W = 26.0, 56.0                     # handle slot at the top, open front below it
 NECK_D   = 14.0                                   # depth of the handle slot
 
 def disc(r, z0, z1):
     return cq.Workplane("XY").circle(r).extrude(z1 - z0).translate((0, PF_Y, z0))
 
-def cradle_outline(z0, z1, r, y_rear):
-    """Plan shape: straight sides at the back, round at the front (a U), as a solid from z0 to z1."""
-    back = box(-r, r, PF_Y, y_rear, z0, z1)
-    front = disc(r, z0, z1).intersect(box(-r-1, r+1, PF_Y-r-1, PF_Y+0.01, z0-1, z1+1))
-    return front.union(back)
-
+def hull(inset, z0, z1, y_rear, flat_front=True):
+    """The shared body shape, as a solid between z0 and z1. In plan it is a U: straight sides at the back,
+    round at the front. Below HULL_Z1 the round front is drawn in towards the bottom along a smooth curve
+    (a circle at HULL_Z1 fading to a shallow ellipse at the very bottom), so the body has a curved
+    undercut instead of a vertical face. The sides stay full width, where the load cell sits."""
+    a = OUT_R - inset
+    slope = (OUT_R - HULL_B0) / (HULL_Z1 - HULL_Z0)
+    zb = HULL_Z0 - 6.0
+    b_bot = HULL_B0 - 6.0 * slope - inset
+    lower = (cq.Workplane("XY").workplane(offset=zb).center(0, PF_Y).ellipse(a, b_bot)
+             .workplane(offset=HULL_Z1 - zb).circle(a).loft(combine=True))
+    upper = disc(a, HULL_Z1, TOP_Z + 6.0)
+    y_front = FRONT_Y if flat_front else PF_Y - OUT_R - 2
+    front = lower.union(upper).intersect(box(-a-1, a+1, y_front, PF_Y + 0.01, zb, TOP_Z + 6.0))
+    back = box(-a, a, PF_Y, y_rear, zb, TOP_Z + 6.0)
+    return front.union(back).intersect(box(-a-2, a+2, PF_Y - OUT_R - 3, y_rear + 1, z0, z1))
 
 # ---- part A: cross mount (stub that takes the cell's place in the stock seat + tray) -------------
-def chin_cutter(setback):
-    """Everything in front of the drafted front face of the cross mount. The face starts at the cradle's
-    flat front at the top and leans back by CHIN_DEG towards the bottom; setback moves it rearwards."""
-    k = math.tan(math.radians(CHIN_DEG))
-    y = lambda z: FRONT_Y + setback + k * (TRAY_Z1 - z)
-    z1, z0 = TRAY_Z1 + 2, TRAY_Z0 - 2
-    return prism_yz([(PF_Y - OUT_R - 5, z1), (y(z1), z1), (y(z0), z0), (PF_Y - OUT_R - 5, z0)], -OUT_R - 2, OUT_R + 2)
-
 def cross_mount():
     stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
     # same U-shaped footprint as the cradle above it, so the two read as one body with a 2 mm shadow line
-    tray = cradle_outline(TRAY_Z0, TRAY_Z1, OUT_R, TRAY_Y1)
+    tray = hull(0.0, TRAY_Z0, TRAY_Z1, TRAY_Y1)
     tray = tray.edges(cq.selectors.BoxSelector((-OUT_R-1, TRAY_Y1-0.5, TRAY_Z0-1), (OUT_R+1, TRAY_Y1+0.5, TRAY_Z1+1))).edges('|Z').fillet(CORNER_R)
-    tray = tray.cut(chin_cutter(0.0))
     # the part in front of the load cell is only a shell: open top and bottom
-    front = cradle_outline(TRAY_Z0-1, TRAY_Z1+1, OUT_R-WALL, TRAY_Y0).cut(chin_cutter(WALL / math.cos(math.radians(CHIN_DEG))))
-    tray = tray.cut(front).faces('<Z').edges().chamfer(FOOT_CHAMFER)
+    front = hull(WALL, TRAY_Z0-1, TRAY_Z1+1, TRAY_Y0).cut(box(-OUT_R, OUT_R, PF_Y-OUT_R-3, FRONT_Y+WALL, TRAY_Z0-2, TRAY_Z1+2))
+    tray = tray.cut(front)
     cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
     pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
     a = tray.cut(cav).union(pad).union(stub)
@@ -111,11 +113,11 @@ def cross_mount():
 # the ears sit above the cradle at any angle.
 def cradle():
     yr = TRAY_Y1
-    body = cradle_outline(BAR_Z0, TOP_Z, OUT_R, yr)
+    body = hull(0.0, BAR_Z0, TOP_Z, yr)
     body = body.edges(cq.selectors.BoxSelector((-OUT_R-1, yr-0.5, BAR_Z0-1), (OUT_R+1, yr+0.5, TOP_Z+1))).edges("|Z").fillet(CORNER_R)
     # hollow inside the walls, open to the rear, closing in at 45 degrees under the seat
     ri = OUT_R - SHELL_T
-    hollow = cradle_outline(BAR_Z1, ROOF_Z, ri, yr + 20)
+    hollow = hull(SHELL_T, BAR_Z1, ROOF_Z, yr + 20, flat_front=False)
     cone = cq.Workplane("XZ").polyline([(0, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)]).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0))
     ridge = prism_xz([(-ri, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)], PF_Y, yr + 20)
     body = body.cut(hollow).cut(cone).cut(ridge)
@@ -124,14 +126,12 @@ def cradle():
     seat = [(0, BAR_Z1), (THROAT_R, BAR_Z1), (THROAT_R, cz - (SEAT_R - THROAT_R)), (SEAT_R, cz), (SEAT_R, TOP_Z + 1), (0, TOP_Z + 1)]
     body = body.cut(cq.Workplane("XZ").polyline(seat).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0)))
     # flat front, handle slot, and an open front that narrows at 45 degrees up to the slot
-    body = body.cut(box(-OUT_R-1, OUT_R+1, PF_Y - OUT_R - 1, FRONT_Y, BAR_Z0 - 1, TOP_Z + 1))
     zs = TOP_Z - NECK_D
     za = zs - (WINDOW_W - NECK_W) / 2
     opening = [(-WINDOW_W/2, BAR_Z1), (WINDOW_W/2, BAR_Z1), (WINDOW_W/2, za), (NECK_W/2, zs), (NECK_W/2, TOP_Z + 1),
                (-NECK_W/2, TOP_Z + 1), (-NECK_W/2, zs), (-WINDOW_W/2, za)]
     body = body.cut(prism_xz(opening, PF_Y - OUT_R - 1, PF_Y))
     # the floor is one closed plate: lid over the load cell at the back, catch tray for stray grounds in front
-    body = body.faces("<Z").edges().chamfer(FOOT_CHAMFER)
     # relief: the lid only touches the cell over the free end
     body = body.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):

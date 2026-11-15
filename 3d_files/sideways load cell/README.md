@@ -8,7 +8,7 @@
 
 An alternative to the cup holder for grinding straight into a 58mm portafilter. The load cell is turned 90° so it lies across the grinder, hidden in a closed box under the portafilter, instead of pointing forward out of the front. The portafilter drops into a round cradle on top.
 
-- The cross mount and the cradle share the same footprint, so they read as one body with a 2 mm shadow line between them.
+- The cross mount and the cradle share one curved hull, so they read as one body with a 2 mm shadow line between them. The front draws in towards the bottom, from 86 mm at the top to 71 mm at the base.
 - The whole assembly reaches 86 mm in front of the grinder face, about the same as the portafilter head it holds (the stock load cell reaches 83 mm).
 - The stock **back plate, cover and screen adapter are unchanged**. Nothing is reprinted and the mod is reversible.
 - The stock cup holder and its hole cover are not used.
@@ -17,7 +17,7 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 
 | Part | Files | Description |
 |------|-------|-------------|
-| **Cross mount** | [STL](Cross%20mount.stl) / [STEP](Cross%20mount.step) | Stub that bolts into the stock load cell seat, plus a tray that holds the load cell sideways. Its front is an open shell that continues the cradle's shape downward and leans back 35° towards the bottom |
+| **Cross mount** | [STL](Cross%20mount.stl) / [STEP](Cross%20mount.step) | Stub that bolts into the stock load cell seat, plus a tray that holds the load cell sideways. Its front is an open shell that continues the cradle's shape downward |
 | **Portafilter cradle** | [STL](Portafilter%20cradle.stl) / [STEP](Portafilter%20cradle.step) | Lid over the load cell with two curved walls and a funnel-shaped seat the portafilter drops into |
 
 `model.py` is the parametric [CadQuery](https://github.com/CadQuery/cadquery) source for both parts. All dimensions are parameters at the top of the file.
@@ -58,7 +58,7 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 - **Portafilter:** any 58mm portafilter with a head up to 72–73 mm wide: spouted or bottomless, any ear layout, any head height.
 - **Rear ear:** an ear pointing directly opposite the handle ends up about 1 mm from the stock cover and may touch it.
 - **Heavy handles:** the cradle supports the head up to 32 mm in front of the basket centre. A portafilter whose balance point is further forward than that (a very heavy handle on a light head) can tip forward.
-- **Weight:** the cradle weighs roughly 40–45 g at 15–20% infill (70 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
+- **Weight:** the cradle weighs roughly 40 g at 15–20% infill (66 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
 - **Load cell cable:** there is 3 mm between each end of the load cell and the tray wall. The cable leaves through the notch at the fixed-end corner.
 - **Basket position:** the basket centre is 2.5 mm further forward than the stock cup holder, so a 72 mm head clears the cover by about 4 mm.
 - **Overload:** the tray floor sits 1 mm under the free end of the load cell as a downward stop. There is no upward stop.
@@ -80,4 +80,4 @@ Most useful parameters:
 - `LEDGE_Z`: height of the seat
 - `PF_Y`: basket centre, front to back
 - `FRONT_Y`: how far forward the cradle supports the head
-- `CHIN_DEG`: draft of the cross mount's front face (0 = vertical, up to 45 without supports)
+- `HULL_B0`, `HULL_Z1`: how far the front draws in at the bottom, and the height where the curve starts
