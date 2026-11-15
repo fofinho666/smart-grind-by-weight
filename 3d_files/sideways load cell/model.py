@@ -13,7 +13,9 @@ PF_Y                   = -114.5             # basket centre (same as the stock c
 PF_R                   = 36.5               # head radius + 0.5 (58 mm portafilter heads are ~70-72 mm OD)
 BASKET_GAP             = 61.5               # clear width between prongs (basket / bowl passes through)
 LEDGE_Z                = -103.0             # underside of the portafilter head rests here
-HEAD_MAX               = 26.5               # tallest head (ledge -> rim) that fits under the hold-down lips
+HEAD_H                 = 23.0               # YOUR portafilter: underside of the head -> top of the rim
+LIP_PLAY               = 1.0                # air between the rim and the hold-down lips
+SEAT_D                 = 1.5                # depth of the seat pocket that stops the head sliding forward
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
 CORNER_R               = 3.0
 
@@ -71,11 +73,10 @@ BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # -163 .. -153
 PRONG_XI = BASKET_GAP/2                           # 30.75
 PLATE_XI, PLATE_XO = 34.0, 43.0
 PRONG_T  = 5.0
-PRONG_Y0, PRONG_Y1 = PF_Y - 22.0, -82.0           # front tip / rear end
+PRONG_Y0, PRONG_Y1 = PF_Y - 26.0, -82.0           # front tip / rear end
 UP_Y0, UP_Y1 = TRAY_Y0, TRAY_Y0 + 16.0            # upright foot on the bar
-LIP_Z0 = LEDGE_Z + HEAD_MAX                       # -76.5
-LIP_Z1 = LIP_Z0 + 3.5
-POST_TOP = LIP_Z1 + 1.5
+LIP_Z0 = LEDGE_Z + HEAD_H + LIP_PLAY              # flat underside of the hold-down lips
+POST_TOP = LIP_Z0 + 4.0
 
 def side_plate():
     zt, zb = LEDGE_Z, LEDGE_Z - PRONG_T
@@ -84,11 +85,15 @@ def side_plate():
     yz = [(UP_Y0, BAR_Z1-1), (UP_Y1, BAR_Z1-1), (UP_Y1, zb-(PRONG_Y1-UP_Y1)), (PRONG_Y1, zb),
           (PRONG_Y1, zt), (PRONG_Y0, zt), (PRONG_Y0, zb), (UP_Y0, zb-(UP_Y0-PRONG_Y0))]
     plate = prism_xz(xz, PRONG_Y0, PRONG_Y1).intersect(prism_yz(yz, 0, PLATE_XO+1))
+    # seat pocket: the front half of the prong is SEAT_D higher, with a round pocket the head drops into
+    rim = box(PRONG_XI, PLATE_XO, PRONG_Y0, PF_Y, zt, zt+SEAT_D)
+    plate = plate.union(rim.cut(cq.Workplane('XY').circle(PF_R).extrude(SEAT_D+2).translate((0, PF_Y, zt-1))))
     # rear post: back-stop pad + hold-down lip, shaped by a revolved cutter around the basket axis
     px0, py0 = 24.0, -94.0
     post = box(px0, PLATE_XO, py0, PRONG_Y1, LEDGE_Z, POST_TOP)
     wedge = prism_xz([(PRONG_XI, zt), (px0, zt), (PRONG_XI, zt-(PRONG_XI-px0))], py0, PRONG_Y1)
-    prof = [(0, LEDGE_Z-12), (PF_R, LEDGE_Z-12), (PF_R, LIP_Z0), (PF_R-3.5, LIP_Z1), (PF_R-3.5, POST_TOP+1), (0, POST_TOP+1)]
+    # flat lip underside (pushes straight down, no outward wedge); 1 mm root chamfer keeps the overhang short
+    prof = [(0, LEDGE_Z-12), (PF_R, LEDGE_Z-12), (PF_R, LIP_Z0-1.0), (PF_R-1.0, LIP_Z0), (PF_R-3.5, LIP_Z0), (PF_R-3.5, POST_TOP+1), (0, POST_TOP+1)]
     cutter = cq.Workplane("XZ").polyline(prof).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0))
     post = post.union(wedge).cut(cutter)
     return plate.union(post)
@@ -111,7 +116,7 @@ def load_cell():      # reference only
     return c
 
 def portafilter():    # reference only: 72 mm head, 23 mm tall, basket below, 2 ears, handle stub
-    h = cq.Workplane("XY").circle(36).extrude(23).translate((0, PF_Y, LEDGE_Z))
+    h = cq.Workplane("XY").circle(36).extrude(HEAD_H).translate((0, PF_Y, LEDGE_Z))
     b = cq.Workplane("XY").circle(30).extrude(14).translate((0, PF_Y, LEDGE_Z-14))
     ears = box(-41, 41, PF_Y-9, PF_Y+9, LEDGE_Z+14, LEDGE_Z+20)
     handle = box(-11, 11, PF_Y-90, PF_Y-30, LEDGE_Z+2, LEDGE_Z+20)
