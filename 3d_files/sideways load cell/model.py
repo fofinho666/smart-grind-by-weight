@@ -2,7 +2,7 @@
 Coordinates = the repo's Fusion assembly frame, mm: x across the grinder (0 = centreline),
 y front/back (grinder front face at y = -63.25, more negative = toward you), z up.
 Stock load cell seat (back plate): cell 70 x 15 x 22, z -190..-168, fixed-end M3 holes at y = -80, x = +-3.5."""
-import cadquery as cq, os
+import cadquery as cq, math, os
 
 # ---- parameters -------------------------------------------------------------
 CELL_L, CELL_W, CELL_H = 70.0, 15.0, 22.0   # T70 as modelled in the repo
@@ -17,6 +17,7 @@ HEAD_H                 = 23.0               # reference portafilter only (not us
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
 CORNER_R               = 6.0                # plan-view corner radius of the load cell box
 FOOT_CHAMFER           = 0.6                # bed-side edge break
+CHIN_DEG               = 35.0               # draft of the cross mount's front face (0 = vertical, max 45 without supports)
 
 # derived layout of the sideways cell
 TRAY_Z0   = SEAT_Z0                 # tray bottom flush with stub bottom (prints flat)
@@ -72,14 +73,22 @@ def cradle_outline(z0, z1, r, y_rear):
 
 
 # ---- part A: cross mount (stub that takes the cell's place in the stock seat + tray) -------------
+def chin_cutter(setback):
+    """Everything in front of the drafted front face of the cross mount. The face starts at the cradle's
+    flat front at the top and leans back by CHIN_DEG towards the bottom; setback moves it rearwards."""
+    k = math.tan(math.radians(CHIN_DEG))
+    y = lambda z: FRONT_Y + setback + k * (TRAY_Z1 - z)
+    z1, z0 = TRAY_Z1 + 2, TRAY_Z0 - 2
+    return prism_yz([(PF_Y - OUT_R - 5, z1), (y(z1), z1), (y(z0), z0), (PF_Y - OUT_R - 5, z0)], -OUT_R - 2, OUT_R + 2)
+
 def cross_mount():
     stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
     # same U-shaped footprint as the cradle above it, so the two read as one body with a 2 mm shadow line
     tray = cradle_outline(TRAY_Z0, TRAY_Z1, OUT_R, TRAY_Y1)
     tray = tray.edges(cq.selectors.BoxSelector((-OUT_R-1, TRAY_Y1-0.5, TRAY_Z0-1), (OUT_R+1, TRAY_Y1+0.5, TRAY_Z1+1))).edges('|Z').fillet(CORNER_R)
-    tray = tray.cut(box(-OUT_R-1, OUT_R+1, PF_Y-OUT_R-1, FRONT_Y, TRAY_Z0-1, TRAY_Z1+1))
+    tray = tray.cut(chin_cutter(0.0))
     # the part in front of the load cell is only a shell: open top and bottom
-    front = cradle_outline(TRAY_Z0-1, TRAY_Z1+1, OUT_R-WALL, TRAY_Y0).cut(box(-OUT_R, OUT_R, PF_Y-OUT_R-1, FRONT_Y+WALL, TRAY_Z0-2, TRAY_Z1+2))
+    front = cradle_outline(TRAY_Z0-1, TRAY_Z1+1, OUT_R-WALL, TRAY_Y0).cut(chin_cutter(WALL / math.cos(math.radians(CHIN_DEG))))
     tray = tray.cut(front).faces('<Z').edges().chamfer(FOOT_CHAMFER)
     cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
     pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
