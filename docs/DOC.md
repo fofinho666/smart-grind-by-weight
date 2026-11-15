@@ -101,6 +101,7 @@ Alternative to the cup holder for grinding straight into a 58mm portafilter. Tur
 
 - **[Cross mount](../3d_files/sideways%20load%20cell/Cross%20mount.stl)** - Bolts into the stock load cell seat and holds the load cell sideways
 - **[Portafilter cradle](../3d_files/sideways%20load%20cell/Portafilter%20cradle.stl)** - Drop-in funnel seat for any 58mm portafilter, and load cell lid
+- **[Hold-down](../3d_files/sideways%20load%20cell/Hold-down.stl)** - Adjustable rest over the back of the rim that keeps the portafilter level
 
 **Community Designs:**
 

@@ -67,6 +67,14 @@ HULL_B0  = 16.0                                   # ... to this depth in front o
 NECK_W, WINDOW_W = 26.0, 56.0                     # handle slot at the top, open front below it
 NECK_D   = 14.0                                   # depth of the handle slot
 SEAT_NOTCH_W = 41.0                               # width of the handle slot over the height of the funnel
+# hold-down (same idea as the stock Eureka fork: a rest over the back of the rim, height set with slotted screws)
+HD_SCREW_Y, HD_SCREW_Z = PF_Y + 17.0, TOP_Z - 10.0   # M3 screw into each side wall of the cradle
+HD_PILOT_D, HD_PILOT_L = 2.8, 9.0                    # printed pilot hole, M3 screws cut their own thread
+HD_T        = 4.0                                    # thickness of stems, arms and bridge
+HD_STEM_W   = 10.0
+HD_TRAVEL   = 12.0                                   # slot length: total height adjustment
+HD_RIM_NOM  = TOP_Z - POCKET_D - 0.5 + HEAD_H         # rim height of the reference portafilter (-84.5)
+HD_BRIDGE_Y0, HD_BRIDGE_Y1 = PF_Y + 26.5, PF_Y + 30.5  # the bridge sits over the back of the rim
 
 def disc(r, z0, z1):
     return cq.Workplane("XY").circle(r).extrude(z1 - z0).translate((0, PF_Y, z0))
@@ -149,7 +157,29 @@ def cradle():
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
         body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
     body = body.cut(head_recess(FREE_X, CELL_YC, BAR_Z1-(BAR_T-3.0), BAR_Z1+1))
+    for sx in (-1, 1):   # pilot holes for the hold-down screws
+        hole = cq.Workplane('YZ').circle(HD_PILOT_D/2).extrude(HD_PILOT_L + 1).translate((OUT_R - HD_PILOT_L, HD_SCREW_Y, HD_SCREW_Z))
+        body = body.cut(hole if sx > 0 else hole.mirror('YZ'))
     return body
+
+# ---- part C: hold-down ---------------------------------------------------------------------------
+def hold_down(rim_z=None):
+    """U-shaped rest over the back of the rim. Two slotted stems slide on the cradle's side walls and are
+    clamped with one screw each, so the height is set once for a given portafilter. Everything at ear
+    height stays outside the ear radius; the bridge passes above the rim. Modelled at rim_z (in use)."""
+    zb = (HD_RIM_NOM if rim_z is None else rim_z) + 0.5          # underside of the bridge
+    x0, x1 = OUT_R + 0.2, OUT_R + 0.2 + HD_T
+    y0, y1 = HD_SCREW_Y - HD_STEM_W/2, HD_SCREW_Y + HD_STEM_W/2
+    nominal = HD_RIM_NOM + 0.5
+    stem_bottom = HD_SCREW_Z - HD_TRAVEL/2 - 4.0 + (zb - nominal)
+    stem = box(x0, x1, y0, y1, stem_bottom, zb + HD_T)
+    slot_c = HD_SCREW_Z + (zb - nominal)
+    slot = cq.Workplane('YZ').slot2D(HD_TRAVEL + 3.4, 3.4, 90).extrude(HD_T + 2).translate((x0 - 1, HD_SCREW_Y, slot_c))
+    arm = box(x0, x1, y0, HD_BRIDGE_Y1, zb, zb + HD_T)
+    side = stem.union(arm).cut(slot)
+    bridge = box(-x1, x1, HD_BRIDGE_Y0, HD_BRIDGE_Y1, zb, zb + HD_T)
+    part = bridge.union(side).union(side.mirror('YZ'))
+    return part.edges(cq.selectors.BoxSelector((-x1-1, HD_BRIDGE_Y1-0.5, zb-1), (x1+1, HD_BRIDGE_Y1+0.5, zb+HD_T+1))).edges('|Z').fillet(3.0)
 
 def load_cell():      # reference only
     c = box(-CELL_L/2, CELL_L/2, CELL_Y0, CELL_Y1, CELL_Z0, CELL_Z1)
@@ -169,7 +199,8 @@ def portafilter():    # reference only: 72 mm head, 23 mm tall, basket below, 2 
 
 if __name__ == "__main__":
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"); os.makedirs(out, exist_ok=True)
-    parts = {"cross_mount": cross_mount(), "cradle": cradle(), "ref_load_cell": load_cell(), "ref_portafilter": portafilter()}
+    parts = {"cross_mount": cross_mount(), "cradle": cradle(), "hold_down": hold_down(), "ref_load_cell": load_cell(), "ref_portafilter": portafilter()}
+    parts["hold_down_print"] = parts["hold_down"].rotate((0, 0, 0), (1, 0, 0), 180)
     for n, p in parts.items():
         cq.exporters.export(p, f"{out}/{n}.step")
         cq.exporters.export(p, f"{out}/{n}.stl", tolerance=0.02, angularTolerance=0.1)
