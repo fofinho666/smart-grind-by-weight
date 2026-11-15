@@ -133,7 +133,8 @@ def cradle():
     body = body.cut(prism_xz(opening, PF_Y - OUT_R - 1, PF_Y))
     # the floor is one closed plate: lid over the load cell at the back, catch tray for stray grounds in front
     # relief: the lid only touches the cell over the free end
-    body = body.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
+    # (kept just larger than the cell and with rounded corners, so the wall stays thick at the body's rounded rear corner)
+    body = body.cut(box(-CELL_L/2-1.5, FREE_X-7, CELL_Y0-1.0, CELL_Y1+1.0, BAR_Z0-1, BAR_Z0+1.5).edges('|Z').fillet(2.0))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
         body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
         body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-(BAR_T-3.0), BAR_Z1+1, M3_CBORE))
