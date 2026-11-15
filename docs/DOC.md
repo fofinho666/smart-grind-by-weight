@@ -95,6 +95,13 @@ All parts designed to print **without supports**. Keep the orientation of the ST
   - **[54mm hole cover](../3d_files/54mm%20Cup%20holder%20hole%20cover.stl)**
   - **[58mm hole cover](../3d_files/58mm%20Cup%20holder%20hole%20cover.stl)**
 
+**Sideways Load Cell + Portafilter Cradle** (`3d_files/sideways load cell/`, experimental):
+
+Alternative to the cup holder for grinding straight into a 58mm portafilter. Turns the load cell 90° so it sits in a closed box under the portafilter instead of pointing out of the front. Reuses the stock back plate and cover unchanged. Not yet test-printed; see the **[README](../3d_files/sideways%20load%20cell/README.md)** for parts, assembly and limits.
+
+- **[Cross mount](../3d_files/sideways%20load%20cell/Cross%20mount.stl)** - Bolts into the stock load cell seat and holds the load cell sideways
+- **[Portafilter cradle](../3d_files/sideways%20load%20cell/Portafilter%20cradle.stl)** - Drop-in funnel seat for any 58mm portafilter, and load cell lid
+
 **Community Designs:**
 
 Looking for grinder-specific mounts or portafilter holders? See **[Community 3D Designs](3D_PRINTS.md)** for portafilter holders, alternative screen mounts, and adaptations for other grinder models.
