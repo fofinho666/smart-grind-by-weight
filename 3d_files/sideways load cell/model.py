@@ -1,4 +1,4 @@
-"""Sideways load-cell mount + portafilter cradle for smart-grind-by-weight (Eureka Mignon Specialita).
+"""Sideways load-cell mount + drop-in portafilter cradle for smart-grind-by-weight (Eureka Mignon Specialita).
 Coordinates = the repo's Fusion assembly frame, mm: x across the grinder (0 = centreline),
 y front/back (grinder front face at y = -63.25, more negative = toward you), z up.
 Stock load cell seat (back plate): cell 70 x 15 x 22, z -190..-168, fixed-end M3 holes at y = -80, x = +-3.5."""
@@ -10,17 +10,13 @@ HOLE_END, HOLE_PITCH   = 6.0, 7.0           # M3 pair: 6 mm from each end, 7 mm 
 SEAT_Y0, SEAT_Z0       = -74.0, -190.0      # stock seat: rear end of cell, underside of cell
 SEAT_HOLE_Y            = -80.0
 PF_Y                   = -117.0             # basket centre (stock cup centre is -114.5; moved forward so a 72 mm head clears the cover)
-PF_R                   = 36.5               # head radius + 0.5 (58 mm portafilter heads are ~70-72 mm OD)
-BASKET_GAP             = 61.5               # clear width between prongs (basket / bowl passes through)
-LEDGE_Z                = -105.0             # underside of the portafilter head rests here
-HEAD_H                 = 23.0               # YOUR portafilter: underside of the head -> top of the rim
-LIP_PLAY               = 1.5                # air between the rim and the hold-down bridge
-EAR_R                  = 42.5               # nothing may sit inside this radius at ear height (ears reach ~41 mm)
-SEAT_D                 = 1.5                # depth of the seat pocket that stops the head sliding forward
+PF_R                   = 36.5               # seat pocket radius: fits heads up to 72-73 mm OD
+BASKET_GAP             = 61.5               # throat of the funnel (basket / bowl / spouts pass through)
+LEDGE_Z                = -105.0             # cradle top is 1 mm above this; raise or lower the whole seat here
+HEAD_H                 = 23.0               # reference portafilter only (not used by the printed parts)
 M3_CLEAR, M3_CBORE     = 3.4, 6.5
 CORNER_R               = 6.0                # plan-view corner radius of the load cell box
 FOOT_CHAMFER           = 0.6                # bed-side edge break
-ARC_R_FRONT, ARC_R_REAR = 24.0, 30.0        # sweep radii of the side plates
 
 # derived layout of the sideways cell
 TRAY_Z0   = SEAT_Z0                 # tray bottom flush with stub bottom (prints flat)
@@ -71,65 +67,62 @@ def cross_mount():
     a = a.cut(box(-TRAY_XI, -TRAY_XI+8, TRAY_Y1-WALL-0.5, TRAY_Y1+1, TRAY_Z1-11, TRAY_Z1+1))
     return a
 
-# ---- part B: yoke (lid bar bolted to the free end + two side plates + prongs + hold-downs) -------
-BAR_T = 10.0
-BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # -163 .. -153
-PRONG_XI = BASKET_GAP/2                           # 30.75
-PLATE_XI, PLATE_XO = 34.0, 43.0
-PRONG_T  = 5.0
-PRONG_Y0, PRONG_Y1 = PF_Y - 26.0, PF_Y + 32.5           # front tip / rear end
-UP_Y0, UP_Y1 = TRAY_Y0 + CORNER_R, TRAY_Y1 - CORNER_R   # upright foot, on the straight part of the bar edge
-LIP_Z0 = LEDGE_Z + HEAD_H + LIP_PLAY              # flat underside of the hold-down bridge
-BRIDGE_T = 3.5
-POST_TOP = LIP_Z0 + BRIDGE_T
-STOP_H = 8.0                                      # rear stop pads stay below ear height
-POST_Y0, BRIDGE_Y0, BRIDGE_Y1 = PF_Y + 25.5, PF_Y + 26.5, PF_Y + 30.5
+# ---- part B: cradle (lid bolted to the free end + two curved walls + funnel seat) -----------------
+# The portafilter drops in from above and rests on a 45-degree funnel, so it self-centres at whatever
+# height its body is 61.5-73 mm wide. Nothing touches the rim, so head height does not matter, and
+# the ears sit above the cradle at any angle.
+BAR_T    = 10.0
+BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # lid: -163 .. -153
+OUT_R    = TRAY_XO                                # 43: cradle is as wide as the load cell box
+SHELL_T  = 4.0                                    # wall thickness
+SEAT_R   = PF_R                                   # 36.5: pocket radius (heads up to 72-73 mm)
+THROAT_R = BASKET_GAP / 2                         # 30.75: basket / bowl / spouts pass through
+TOP_Z    = LEDGE_Z + 1.0                          # top face of the cradle
+POCKET_D = 3.0                                    # straight wall above the funnel
+ROOF_Z   = TOP_Z - 26.0                           # underside starts closing in here, at 45 degrees
+FRONT_Y  = PF_Y - 32.0                            # cradle is cut flat here (front support line)
+NECK_W, WINDOW_W = 26.0, 52.0                     # handle slot at the top, open front below it
+NECK_D   = 14.0                                   # depth of the handle slot
 
-def swept_profile(zt, zb):
-    """Side view (y,z) of a side plate: upright foot, two arcs that sweep out to the prong tips
-    (never steeper than 45 degrees, so it prints without supports), raised seat rim at the front."""
-    import math
-    c, s_ = 1 - math.cos(math.radians(45)), math.sin(math.radians(45))
-    m, n_ = 1 - math.cos(math.radians(22.5)), math.sin(math.radians(22.5))
-    rf, rr = ARC_R_FRONT, ARC_R_REAR
-    zf = zb - rf*s_ - ((UP_Y0 - PRONG_Y0) - rf*c)      # where the front arc leaves the upright
-    zr = zb - rr*s_ - ((PRONG_Y1 - UP_Y1) - rr*c)      # where the rear arc leaves the upright
-    top, tip = zt + SEAT_D, 3.0
-    w = cq.Workplane("YZ").moveTo(UP_Y0, BAR_Z1-1).lineTo(UP_Y1, BAR_Z1-1).lineTo(UP_Y1, zr)
-    w = w.threePointArc((UP_Y1 + rr*m, zr + rr*n_), (UP_Y1 + rr*c, zr + rr*s_)).lineTo(PRONG_Y1, zb)
-    w = w.lineTo(PRONG_Y1, zt).lineTo(PF_Y, zt).lineTo(PF_Y, top).lineTo(PRONG_Y0 + tip, top)
-    w = w.threePointArc((PRONG_Y0 + tip*(1-s_), top - tip*c), (PRONG_Y0, top - tip)).lineTo(PRONG_Y0, zb)
-    w = w.lineTo(UP_Y0 - rf*c, zf + rf*s_).threePointArc((UP_Y0 - rf*m, zf + rf*n_), (UP_Y0, zf))
-    return w.close()
+def disc(r, z0, z1):
+    return cq.Workplane("XY").circle(r).extrude(z1 - z0).translate((0, PF_Y, z0))
 
-def side_plate():
-    zt, zb = LEDGE_Z, LEDGE_Z - PRONG_T
-    xz = [(PLATE_XO, BAR_Z1-1), (PLATE_XI, BAR_Z1-1), (PLATE_XI, zb-(PLATE_XI-PRONG_XI)),
-          (PRONG_XI, zb), (PRONG_XI, zt+SEAT_D), (PLATE_XO, zt+SEAT_D)]
-    plate = prism_xz(xz, PRONG_Y0, PRONG_Y1).intersect(swept_profile(zt, zb).extrude(PLATE_XO+1))
-    plate = plate.cut(cq.Workplane('XY').circle(PF_R).extrude(SEAT_D+2).translate((0, PF_Y, zt)))
-    # rear post: stands outside the ear radius, so ears can sit at any angle
-    post = box(PLATE_XI, PLATE_XO, POST_Y0, PRONG_Y1, LEDGE_Z, POST_TOP)
-    # low back-stop pad (below ear height), shaped to the head radius
-    px0, py0 = 24.0, PF_Y + 20.5
-    pad = box(px0, PLATE_XI+1, py0, PRONG_Y1, LEDGE_Z, LEDGE_Z+STOP_H)
-    wedge = prism_xz([(PRONG_XI, zt), (px0, zt), (PRONG_XI, zt-(PRONG_XI-px0))], py0, PRONG_Y1)
-    head = cq.Workplane("XY").circle(PF_R).extrude(STOP_H+14).translate((0, PF_Y, LEDGE_Z-12))
-    post = post.union(pad.union(wedge).cut(head))
-    return plate.union(post)
+def cradle_outline(z0, z1, r, y_rear):
+    """Plan shape: straight sides at the back, round at the front (a U), as a solid from z0 to z1."""
+    back = box(-r, r, PF_Y, y_rear, z0, z1)
+    front = disc(r, z0, z1).intersect(box(-r-1, r+1, PF_Y-r-1, PF_Y+0.01, z0-1, z1+1))
+    return front.union(back)
 
-def yoke():
-    bar = box(-TRAY_XO, TRAY_XO, TRAY_Y0, TRAY_Y1, BAR_Z0, BAR_Z1).edges('|Z').fillet(CORNER_R)
-    bar = bar.faces('<Z').edges().chamfer(FOOT_CHAMFER)
-    # relief: the bar only touches the cell over the free end
-    bar = bar.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
+def cradle():
+    yr = TRAY_Y1
+    body = cradle_outline(BAR_Z0, TOP_Z, OUT_R, yr)
+    body = body.edges(cq.selectors.BoxSelector((-OUT_R-1, yr-0.5, BAR_Z0-1), (OUT_R+1, yr+0.5, TOP_Z+1))).edges("|Z").fillet(CORNER_R)
+    # hollow inside the walls, open to the rear, closing in at 45 degrees under the seat
+    ri = OUT_R - SHELL_T
+    hollow = cradle_outline(BAR_Z1, ROOF_Z, ri, yr + 20)
+    cone = cq.Workplane("XZ").polyline([(0, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)]).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0))
+    ridge = prism_xz([(-ri, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)], PF_Y, yr + 20)
+    body = body.cut(hollow).cut(cone).cut(ridge)
+    # funnel seat: throat, 45-degree cone, short straight pocket
+    cz = TOP_Z - POCKET_D
+    seat = [(0, BAR_Z1), (THROAT_R, BAR_Z1), (THROAT_R, cz - (SEAT_R - THROAT_R)), (SEAT_R, cz), (SEAT_R, TOP_Z + 1), (0, TOP_Z + 1)]
+    body = body.cut(cq.Workplane("XZ").polyline(seat).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0)))
+    # flat front, handle slot, and an open front that narrows at 45 degrees up to the slot
+    body = body.cut(box(-OUT_R-1, OUT_R+1, PF_Y - OUT_R - 1, FRONT_Y, BAR_Z0 - 1, TOP_Z + 1))
+    zs = TOP_Z - NECK_D
+    za = zs - (WINDOW_W - NECK_W) / 2
+    opening = [(-WINDOW_W/2, BAR_Z1), (WINDOW_W/2, BAR_Z1), (WINDOW_W/2, za), (NECK_W/2, zs), (NECK_W/2, TOP_Z + 1),
+               (-NECK_W/2, TOP_Z + 1), (-NECK_W/2, zs), (-WINDOW_W/2, za)]
+    body = body.cut(prism_xz(opening, PF_Y - OUT_R - 1, PF_Y))
+    # floor: keep the lid over the load cell and a front tie bar, open the rest so drips fall through
+    body = body.cut(box(-ri + 6, ri - 6, FRONT_Y + 8, TRAY_Y0 - 6, BAR_Z0 - 1, BAR_Z1 + 1).edges("|Z").fillet(5))
+    body = body.faces("<Z").edges().chamfer(FOOT_CHAMFER)
+    # relief: the lid only touches the cell over the free end
+    body = body.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
-        bar = bar.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
-        bar = bar.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-5.5, BAR_Z1+1, M3_CBORE))
-    sp = side_plate()
-    # hold-down bridge: a flat beam above the rear of the rim, joining the two posts
-    bridge = box(-PLATE_XO, PLATE_XO, BRIDGE_Y0, BRIDGE_Y1, LIP_Z0, POST_TOP).edges('|X').edges('>Z').fillet(1.2)
-    return bar.union(sp).union(sp.mirror("YZ")).union(bridge)
+        body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
+        body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-5.5, BAR_Z1+1, M3_CBORE))
+    return body
 
 def load_cell():      # reference only
     c = box(-CELL_L/2, CELL_L/2, CELL_Y0, CELL_Y1, CELL_Z0, CELL_Z1)
@@ -140,15 +133,16 @@ def load_cell():      # reference only
 
 EAR_ANGLE = 0.0
 def portafilter():    # reference only: 72 mm head, 23 mm tall, basket below, 2 ears, handle stub
-    h = cq.Workplane("XY").circle(36).extrude(HEAD_H).translate((0, PF_Y, LEDGE_Z))
-    b = cq.Workplane("XY").circle(30).extrude(14).translate((0, PF_Y, LEDGE_Z-14))
-    ears = box(-41, 41, PF_Y-9, PF_Y+9, LEDGE_Z+14, LEDGE_Z+20).rotate((0, PF_Y, 0), (0, PF_Y, 1), EAR_ANGLE)
-    handle = box(-11, 11, PF_Y-90, PF_Y-30, LEDGE_Z+2, LEDGE_Z+20)
+    REST_Z = TOP_Z - POCKET_D - (SEAT_R - 36.0)
+    h = cq.Workplane("XY").circle(36).extrude(HEAD_H).translate((0, PF_Y, REST_Z))
+    b = cq.Workplane("XY").circle(30).extrude(14).translate((0, PF_Y, REST_Z-14))
+    ears = box(-41, 41, PF_Y-9, PF_Y+9, REST_Z+14, REST_Z+20).rotate((0, PF_Y, 0), (0, PF_Y, 1), EAR_ANGLE)
+    handle = box(-11, 11, PF_Y-90, PF_Y-30, REST_Z+2, REST_Z+20)
     return h.union(b).union(ears).union(handle)
 
 if __name__ == "__main__":
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"); os.makedirs(out, exist_ok=True)
-    parts = {"cross_mount": cross_mount(), "yoke": yoke(), "ref_load_cell": load_cell(), "ref_portafilter": portafilter()}
+    parts = {"cross_mount": cross_mount(), "cradle": cradle(), "ref_load_cell": load_cell(), "ref_portafilter": portafilter()}
     for n, p in parts.items():
         cq.exporters.export(p, f"{out}/{n}.step")
         cq.exporters.export(p, f"{out}/{n}.stl", tolerance=0.02, angularTolerance=0.1)
