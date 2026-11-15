@@ -8,8 +8,8 @@
 
 An alternative to the cup holder for grinding straight into a 58mm portafilter. The load cell is turned 90° so it lies across the grinder, hidden in a closed box under the portafilter, instead of pointing forward out of the front. The portafilter drops into a round cradle on top.
 
-- The load cell box ends 53 mm in front of the grinder face (the stock load cell reaches 83 mm).
-- The cradle reaches 86 mm, about the same as the portafilter head it holds.
+- The cross mount and the cradle share the same footprint, so they read as one body with a 2 mm shadow line between them.
+- The whole assembly reaches 86 mm in front of the grinder face, about the same as the portafilter head it holds (the stock load cell reaches 83 mm).
 - The stock **back plate, cover and screen adapter are unchanged**. Nothing is reprinted and the mod is reversible.
 - The stock cup holder and its hole cover are not used.
 
@@ -17,7 +17,7 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 
 | Part | Files | Description |
 |------|-------|-------------|
-| **Cross mount** | [STL](Cross%20mount.stl) / [STEP](Cross%20mount.step) | Stub that bolts into the stock load cell seat, plus a tray that holds the load cell sideways |
+| **Cross mount** | [STL](Cross%20mount.stl) / [STEP](Cross%20mount.step) | Stub that bolts into the stock load cell seat, plus a tray that holds the load cell sideways. Its front is an open shell that continues the cradle's shape downward |
 | **Portafilter cradle** | [STL](Portafilter%20cradle.stl) / [STEP](Portafilter%20cradle.step) | Lid over the load cell with two curved walls and a funnel-shaped seat the portafilter drops into |
 
 `model.py` is the parametric [CadQuery](https://github.com/CadQuery/cadquery) source for both parts. All dimensions are parameters at the top of the file.

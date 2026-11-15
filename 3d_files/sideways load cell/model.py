@@ -47,30 +47,7 @@ def prism_xz(pts, y0, y1):          # polygon in (x,z), extruded along y
 def prism_yz(pts, x0, x1):          # polygon in (y,z), extruded along x
     return cq.Workplane("YZ").polyline(pts).close().extrude(x1-x0).translate((x0, 0, 0))
 
-# ---- part A: cross mount (stub that takes the cell's place in the stock seat + tray) -------------
-def cross_mount():
-    stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
-    tray = box(-TRAY_XO, TRAY_XO, TRAY_Y0, TRAY_Y1, TRAY_Z0, TRAY_Z1).edges('|Z').fillet(CORNER_R)
-    tray = tray.faces('<Z').edges().chamfer(FOOT_CHAMFER)
-    cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
-    pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
-    a = tray.cut(cav).union(pad).union(stub)
-    # fixed-end screws, from below into the cell's threaded holes
-    for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
-        a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, CELL_Z0+1, M3_CLEAR))
-        a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, TRAY_Z0+2.5, M3_CBORE))
-    # stub: stock seat screws come up through the back plate shelf into captive M3 nuts
-    for dx in (-HOLE_PITCH/2, HOLE_PITCH/2):
-        a = a.cut(vcyl(dx, SEAT_HOLE_Y, SEAT_Z0-1, SEAT_Z0+9, M3_CLEAR))
-    a = a.cut(box(-6.9, CELL_W/2+1, SEAT_HOLE_Y-2.95, SEAT_HOLE_Y+2.95, SEAT_Z0+3.0, SEAT_Z0+5.8))
-    # cable notch at the fixed-end corner, towards the cover opening
-    a = a.cut(box(-TRAY_XI, -TRAY_XI+8, TRAY_Y1-WALL-0.5, TRAY_Y1+1, TRAY_Z1-11, TRAY_Z1+1))
-    return a
-
-# ---- part B: cradle (lid bolted to the free end + two curved walls + funnel seat) -----------------
-# The portafilter drops in from above and rests on a 45-degree funnel, so it self-centres at whatever
-# height its body is 61.5-73 mm wide. Nothing touches the rim, so head height does not matter, and
-# the ears sit above the cradle at any angle.
+# ---- shared outline ---------------------------------------------------------------------------
 BAR_T    = 10.0
 BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # lid: -163 .. -153
 OUT_R    = TRAY_XO                                # 43: cradle is as wide as the load cell box
@@ -93,6 +70,36 @@ def cradle_outline(z0, z1, r, y_rear):
     front = disc(r, z0, z1).intersect(box(-r-1, r+1, PF_Y-r-1, PF_Y+0.01, z0-1, z1+1))
     return front.union(back)
 
+
+# ---- part A: cross mount (stub that takes the cell's place in the stock seat + tray) -------------
+def cross_mount():
+    stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
+    # same U-shaped footprint as the cradle above it, so the two read as one body with a 2 mm shadow line
+    tray = cradle_outline(TRAY_Z0, TRAY_Z1, OUT_R, TRAY_Y1)
+    tray = tray.edges(cq.selectors.BoxSelector((-OUT_R-1, TRAY_Y1-0.5, TRAY_Z0-1), (OUT_R+1, TRAY_Y1+0.5, TRAY_Z1+1))).edges('|Z').fillet(CORNER_R)
+    tray = tray.cut(box(-OUT_R-1, OUT_R+1, PF_Y-OUT_R-1, FRONT_Y, TRAY_Z0-1, TRAY_Z1+1))
+    # the part in front of the load cell is only a shell: open top and bottom
+    front = cradle_outline(TRAY_Z0-1, TRAY_Z1+1, OUT_R-WALL, TRAY_Y0).cut(box(-OUT_R, OUT_R, PF_Y-OUT_R-1, FRONT_Y+WALL, TRAY_Z0-2, TRAY_Z1+2))
+    tray = tray.cut(front).faces('<Z').edges().chamfer(FOOT_CHAMFER)
+    cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
+    pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
+    a = tray.cut(cav).union(pad).union(stub)
+    # fixed-end screws, from below into the cell's threaded holes
+    for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
+        a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, CELL_Z0+1, M3_CLEAR))
+        a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, TRAY_Z0+2.5, M3_CBORE))
+    # stub: stock seat screws come up through the back plate shelf into captive M3 nuts
+    for dx in (-HOLE_PITCH/2, HOLE_PITCH/2):
+        a = a.cut(vcyl(dx, SEAT_HOLE_Y, SEAT_Z0-1, SEAT_Z0+9, M3_CLEAR))
+    a = a.cut(box(-6.9, CELL_W/2+1, SEAT_HOLE_Y-2.95, SEAT_HOLE_Y+2.95, SEAT_Z0+3.0, SEAT_Z0+5.8))
+    # cable notch at the fixed-end corner, towards the cover opening
+    a = a.cut(box(-TRAY_XI, -TRAY_XI+8, TRAY_Y1-WALL-0.5, TRAY_Y1+1, TRAY_Z1-11, TRAY_Z1+1))
+    return a
+
+# ---- part B: cradle (lid bolted to the free end + two curved walls + funnel seat) -----------------
+# The portafilter drops in from above and rests on a 45-degree funnel, so it self-centres at whatever
+# height its body is 61.5-73 mm wide. Nothing touches the rim, so head height does not matter, and
+# the ears sit above the cradle at any angle.
 def cradle():
     yr = TRAY_Y1
     body = cradle_outline(BAR_Z0, TOP_Z, OUT_R, yr)
