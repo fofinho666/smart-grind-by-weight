@@ -38,6 +38,10 @@ FIX_X, FREE_X = -(CELL_L/2 - HOLE_END), (CELL_L/2 - HOLE_END)   # -29 / +29
 def box(x0, x1, y0, y1, z0, z1):
     return cq.Workplane("XY").box(x1-x0, y1-y0, z1-z0, centered=False).translate((x0, y0, z0))
 
+def head_recess(x, y, z0, z1):
+    """Obround pocket for the two M3 screw heads of one load cell end."""
+    return (cq.Workplane("XY").slot2D(HOLE_PITCH + M3_CBORE, M3_CBORE, 90).extrude(z1 - z0).translate((x, y, z0)))
+
 def vcyl(x, y, z0, z1, d):
     return cq.Workplane("XY").circle(d/2).extrude(z1-z0).translate((x, y, z0))
 
@@ -62,11 +66,12 @@ HULL_Z0, HULL_Z1 = TRAY_Z0, -135.0                # the front draws in below HUL
 HULL_B0  = 16.0                                   # ... to this depth in front of the basket axis at the bottom
 NECK_W, WINDOW_W = 26.0, 56.0                     # handle slot at the top, open front below it
 NECK_D   = 14.0                                   # depth of the handle slot
+SEAT_NOTCH_W = 41.0                               # width of the handle slot over the height of the funnel
 
 def disc(r, z0, z1):
     return cq.Workplane("XY").circle(r).extrude(z1 - z0).translate((0, PF_Y, z0))
 
-def hull(inset, z0, z1, y_rear, flat_front=True):
+def hull(inset, z0, z1, y_rear, flat_front=True, corner_r=None):
     """The shared body shape, as a solid between z0 and z1. In plan it is a U: straight sides at the back,
     round at the front. Below HULL_Z1 the round front is drawn in towards the bottom along a smooth curve
     (a circle at HULL_Z1 fading to a shallow ellipse at the very bottom), so the body has a curved
@@ -81,6 +86,9 @@ def hull(inset, z0, z1, y_rear, flat_front=True):
     y_front = FRONT_Y if flat_front else PF_Y - OUT_R - 2
     front = lower.union(upper).intersect(box(-a-1, a+1, y_front, PF_Y + 0.01, zb, TOP_Z + 6.0))
     back = box(-a, a, PF_Y, y_rear, zb, TOP_Z + 6.0)
+    r = CORNER_R - inset if corner_r is None else corner_r
+    if r > 0:      # rounded rear corners; an inset shell keeps the same wall thickness round the corner
+        back = back.edges(cq.selectors.BoxSelector((-a-1, y_rear-0.5, zb-1), (a+1, y_rear+0.5, TOP_Z+7))).edges('|Z').fillet(r)
     return front.union(back).intersect(box(-a-2, a+2, PF_Y - OUT_R - 3, y_rear + 1, z0, z1))
 
 # ---- part A: cross mount (stub that takes the cell's place in the stock seat + tray) -------------
@@ -88,9 +96,8 @@ def cross_mount():
     stub = box(-CELL_W/2, CELL_W/2, TRAY_Y1-0.5, SEAT_Y0, SEAT_Z0, SEAT_Z0+CELL_H)
     # same U-shaped footprint as the cradle above it, so the two read as one body with a 2 mm shadow line
     tray = hull(0.0, TRAY_Z0, TRAY_Z1, TRAY_Y1)
-    tray = tray.edges(cq.selectors.BoxSelector((-OUT_R-1, TRAY_Y1-0.5, TRAY_Z0-1), (OUT_R+1, TRAY_Y1+0.5, TRAY_Z1+1))).edges('|Z').fillet(CORNER_R)
     # the part in front of the load cell is only a shell: open top and bottom
-    front = hull(WALL, TRAY_Z0-1, TRAY_Z1+1, TRAY_Y0).cut(box(-OUT_R, OUT_R, PF_Y-OUT_R-3, FRONT_Y+WALL, TRAY_Z0-2, TRAY_Z1+2))
+    front = hull(WALL, TRAY_Z0-1, TRAY_Z1+1, TRAY_Y0, corner_r=0).cut(box(-OUT_R, OUT_R, PF_Y-OUT_R-3, FRONT_Y+WALL, TRAY_Z0-2, TRAY_Z1+2))
     tray = tray.cut(front)
     cav  = box(-TRAY_XI, TRAY_XI, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, TRAY_Z1+1).edges('|Z').fillet(CORNER_R-WALL)
     pad  = box(-TRAY_XI, FIX_X+7, TRAY_Y0+WALL, TRAY_Y1-WALL, TRAY_Z0+FLOOR_T, CELL_Z0)
@@ -98,13 +105,14 @@ def cross_mount():
     # fixed-end screws, from below into the cell's threaded holes
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
         a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, CELL_Z0+1, M3_CLEAR))
-        a = a.cut(vcyl(FIX_X, CELL_YC+dy, TRAY_Z0-1, TRAY_Z0+2.5, M3_CBORE))
+    # one shared recess for both screw heads (two round counterbores would leave a 0.5 mm web between them)
+    a = a.cut(head_recess(FIX_X, CELL_YC, TRAY_Z0-1, TRAY_Z0+2.5))
     # stub: stock seat screws come up through the back plate shelf into captive M3 nuts
     for dx in (-HOLE_PITCH/2, HOLE_PITCH/2):
         a = a.cut(vcyl(dx, SEAT_HOLE_Y, SEAT_Z0-1, SEAT_Z0+9, M3_CLEAR))
-    a = a.cut(box(-6.9, CELL_W/2+1, SEAT_HOLE_Y-2.95, SEAT_HOLE_Y+2.95, SEAT_Z0+3.0, SEAT_Z0+5.8))
+    a = a.cut(box(-CELL_W/2-1, CELL_W/2+1, SEAT_HOLE_Y-2.95, SEAT_HOLE_Y+2.95, SEAT_Z0+3.0, SEAT_Z0+5.8))   # nut slot, open both sides
     # cable notch at the fixed-end corner, towards the cover opening
-    a = a.cut(box(-TRAY_XI, -TRAY_XI+8, TRAY_Y1-WALL-0.5, TRAY_Y1+1, TRAY_Z1-11, TRAY_Z1+1))
+    a = a.cut(box(-TRAY_XI+2, -TRAY_XI+10, TRAY_Y1-WALL-0.5, TRAY_Y1+1, TRAY_Z1-11, TRAY_Z1+1))   # clear of the rounded corner
     return a
 
 # ---- part B: cradle (lid bolted to the free end + two curved walls + funnel seat) -----------------
@@ -114,16 +122,16 @@ def cross_mount():
 def cradle():
     yr = TRAY_Y1
     body = hull(0.0, BAR_Z0, TOP_Z, yr)
-    body = body.edges(cq.selectors.BoxSelector((-OUT_R-1, yr-0.5, BAR_Z0-1), (OUT_R+1, yr+0.5, TOP_Z+1))).edges("|Z").fillet(CORNER_R)
-    # hollow inside the walls, open to the rear, closing in at 45 degrees under the seat
+    # hollow inside the walls (closed at the rear, same wall thickness round the corners),
+    # closing in at 45 degrees under the seat
     ri = OUT_R - SHELL_T
-    hollow = hull(SHELL_T, BAR_Z1, ROOF_Z, yr + 20, flat_front=False)
+    hollow = hull(SHELL_T, BAR_Z1, ROOF_Z, yr - SHELL_T, flat_front=False)
     cone = cq.Workplane("XZ").polyline([(0, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)]).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0))
-    ridge = prism_xz([(-ri, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)], PF_Y, yr + 20)
+    ridge = prism_xz([(-ri, ROOF_Z), (ri, ROOF_Z), (0, ROOF_Z + ri)], PF_Y, yr - SHELL_T)
     body = body.cut(hollow).cut(cone).cut(ridge)
     # funnel seat: throat, 45-degree cone, short straight pocket
     cz = TOP_Z - POCKET_D
-    seat = [(0, BAR_Z1), (THROAT_R, BAR_Z1), (THROAT_R, cz - (SEAT_R - THROAT_R)), (SEAT_R, cz), (SEAT_R, TOP_Z + 1), (0, TOP_Z + 1)]
+    seat = [(0, ROOF_Z), (THROAT_R, ROOF_Z), (THROAT_R, cz - (SEAT_R - THROAT_R)), (SEAT_R, cz), (SEAT_R, TOP_Z + 1), (0, TOP_Z + 1)]
     body = body.cut(cq.Workplane("XZ").polyline(seat).close().revolve(360, (0, 0, 0), (0, 1, 0)).translate((0, PF_Y, 0)))
     # flat front, handle slot, and an open front that narrows at 45 degrees up to the slot
     zs = TOP_Z - NECK_D
@@ -131,13 +139,16 @@ def cradle():
     opening = [(-WINDOW_W/2, BAR_Z1), (WINDOW_W/2, BAR_Z1), (WINDOW_W/2, za), (NECK_W/2, zs), (NECK_W/2, TOP_Z + 1),
                (-NECK_W/2, TOP_Z + 1), (-NECK_W/2, zs), (-WINDOW_W/2, za)]
     body = body.cut(prism_xz(opening, PF_Y - OUT_R - 1, PF_Y))
+    # the seat pocket is wider than the flat front, so beside the handle slot it would end in knife edges:
+    # square them off with a wider notch over the height of the funnel
+    body = body.cut(box(-SEAT_NOTCH_W/2, SEAT_NOTCH_W/2, PF_Y - OUT_R - 3, PF_Y - 20, cz - (SEAT_R - THROAT_R), TOP_Z + 1))
     # the floor is one closed plate: lid over the load cell at the back, catch tray for stray grounds in front
     # relief: the lid only touches the cell over the free end
     # (kept just larger than the cell and with rounded corners, so the wall stays thick at the body's rounded rear corner)
     body = body.cut(box(-CELL_L/2-1.5, FREE_X-7, CELL_Y0-1.0, CELL_Y1+1.0, BAR_Z0-1, BAR_Z0+1.5).edges('|Z').fillet(2.0))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
         body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
-        body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-(BAR_T-3.0), BAR_Z1+1, M3_CBORE))
+    body = body.cut(head_recess(FREE_X, CELL_YC, BAR_Z1-(BAR_T-3.0), BAR_Z1+1))
     return body
 
 def load_cell():      # reference only

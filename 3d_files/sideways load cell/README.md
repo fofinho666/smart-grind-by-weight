@@ -37,7 +37,7 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 
 ## Assembly
 
-1. Slide two M3 nuts into the slot in the side of the stub.
+1. Slide two M3 nuts into the slot through the stub, one over each screw hole.
 2. Drop the load cell into the tray with its cable end at the notched corner. Fix it with two M3 × 10 screws from underneath.
 3. Push the stub into the stock load cell seat through the cover opening. Fasten it with the two stock seat screws from below into the nuts.
 4. Run the cable through the notch into the cover opening to the HX711.
@@ -57,8 +57,8 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 
 - **Portafilter:** any 58mm portafilter with a head up to 72–73 mm wide: spouted or bottomless, any ear layout, any head height.
 - **Rear ear:** an ear pointing directly opposite the handle ends up about 1 mm from the stock cover and may touch it.
-- **Heavy handles:** the cradle supports the head up to 32 mm in front of the basket centre. A portafilter whose balance point is further forward than that (a very heavy handle on a light head) can tip forward.
-- **Weight:** the cradle weighs roughly 40 g at 15–20% infill (66 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
+- **Heavy handles:** the cradle supports the head up to about 30 mm in front of the basket centre. A portafilter whose balance point is further forward than that (a very heavy handle on a light head) can tip forward.
+- **Weight:** the cradle weighs roughly 45 g at 15–20% infill (76 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
 - **Load cell cable:** there is 3 mm between each end of the load cell and the tray wall. The cable leaves through the notch at the fixed-end corner.
 - **Basket position:** the basket centre is 2.5 mm further forward than the stock cup holder, so a 72 mm head clears the cover by about 4 mm.
 - **Overload:** the tray floor sits 1 mm under the free end of the load cell as a downward stop. There is no upward stop.
