@@ -57,7 +57,8 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 - **Portafilter:** any 58mm portafilter with a head up to 72–73 mm wide: spouted or bottomless, any ear layout, any head height.
 - **Rear ear:** an ear pointing directly opposite the handle ends up about 1 mm from the stock cover and may touch it.
 - **Heavy handles:** the cradle supports the head up to 32 mm in front of the basket centre. A portafilter whose balance point is further forward than that (a very heavy handle on a light head) can tip forward.
-- **Weight:** the cradle weighs roughly 50–60 g at 15–20% infill, so a portafilter over roughly 650 g gets close to the 1 kg load cell limit.
+- **Weight:** the cradle weighs roughly 35–40 g at 15–20% infill (60 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
+- **Load cell cable:** there is 3 mm between each end of the load cell and the tray wall. The cable leaves through the notch at the fixed-end corner.
 - **Basket position:** the basket centre is 2.5 mm further forward than the stock cup holder, so a 72 mm head clears the cover by about 4 mm.
 - **Overload:** the tray floor sits 1 mm under the free end of the load cell as a downward stop. There is no upward stop.
 - **Dimensions source:** load cell and grinder geometry are taken from the Fusion 360 design in `3d_files/smart-grind-by-weight. Eureka Mignon.f3z`, not measured on hardware. Real clearances may differ by a millimetre or two.

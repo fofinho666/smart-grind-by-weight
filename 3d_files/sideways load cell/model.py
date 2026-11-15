@@ -25,13 +25,13 @@ PAD_T     = 1.0                     # fixed end sits on a 1 mm pad -> 1 mm overl
 CELL_Z0   = TRAY_Z0 + FLOOR_T + PAD_T          # -185
 CELL_Z1   = CELL_Z0 + CELL_H                   # -163
 TRAY_Y1   = -92.5                   # rear face of tray (1.5 mm in front of the stock cover)
-WALL      = 3.0
+WALL      = 2.5
 SIDE_GAP  = 1.5
 CELL_Y1   = TRAY_Y1 - WALL - SIDE_GAP          # -97
 CELL_Y0   = CELL_Y1 - CELL_W                   # -112
 CELL_YC   = (CELL_Y0 + CELL_Y1) / 2            # -104.5
 TRAY_Y0   = CELL_Y0 - SIDE_GAP - WALL          # -116.5
-TRAY_XI, TRAY_XO = 40.0, 43.0
+TRAY_XI, TRAY_XO = 38.0, 40.5
 TRAY_Z1   = CELL_Z1 - 2.0           # walls stop 2 mm below the yoke (shadow gap, nothing touches)
 FIX_X, FREE_X = -(CELL_L/2 - HOLE_END), (CELL_L/2 - HOLE_END)   # -29 / +29
 
@@ -48,17 +48,17 @@ def prism_yz(pts, x0, x1):          # polygon in (y,z), extruded along x
     return cq.Workplane("YZ").polyline(pts).close().extrude(x1-x0).translate((x0, 0, 0))
 
 # ---- shared outline ---------------------------------------------------------------------------
-BAR_T    = 10.0
+BAR_T    = 6.0
 BAR_Z0, BAR_Z1 = CELL_Z1, CELL_Z1 + BAR_T        # lid: -163 .. -153
 OUT_R    = TRAY_XO                                # 43: cradle is as wide as the load cell box
-SHELL_T  = 4.0                                    # wall thickness
+SHELL_T  = 3.0                                    # wall thickness
 SEAT_R   = PF_R                                   # 36.5: pocket radius (heads up to 72-73 mm)
 THROAT_R = BASKET_GAP / 2                         # 30.75: basket / bowl / spouts pass through
 TOP_Z    = LEDGE_Z + 1.0                          # top face of the cradle
 POCKET_D = 3.0                                    # straight wall above the funnel
-ROOF_Z   = TOP_Z - 26.0                           # underside starts closing in here, at 45 degrees
+ROOF_Z   = TOP_Z - 22.0                           # underside starts closing in here, at 45 degrees
 FRONT_Y  = PF_Y - 32.0                            # cradle is cut flat here (front support line)
-NECK_W, WINDOW_W = 26.0, 52.0                     # handle slot at the top, open front below it
+NECK_W, WINDOW_W = 26.0, 56.0                     # handle slot at the top, open front below it
 NECK_D   = 14.0                                   # depth of the handle slot
 
 def disc(r, z0, z1):
@@ -128,7 +128,7 @@ def cradle():
     body = body.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))
     for dy in (-HOLE_PITCH/2, HOLE_PITCH/2):
         body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z0-1, BAR_Z1+1, M3_CLEAR))
-        body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-5.5, BAR_Z1+1, M3_CBORE))
+        body = body.cut(vcyl(FREE_X, CELL_YC+dy, BAR_Z1-(BAR_T-3.0), BAR_Z1+1, M3_CBORE))
     return body
 
 def load_cell():      # reference only
