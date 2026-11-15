@@ -121,8 +121,7 @@ def cradle():
     opening = [(-WINDOW_W/2, BAR_Z1), (WINDOW_W/2, BAR_Z1), (WINDOW_W/2, za), (NECK_W/2, zs), (NECK_W/2, TOP_Z + 1),
                (-NECK_W/2, TOP_Z + 1), (-NECK_W/2, zs), (-WINDOW_W/2, za)]
     body = body.cut(prism_xz(opening, PF_Y - OUT_R - 1, PF_Y))
-    # floor: keep the lid over the load cell and a front tie bar, open the rest so drips fall through
-    body = body.cut(box(-ri + 6, ri - 6, FRONT_Y + 8, TRAY_Y0 - 6, BAR_Z0 - 1, BAR_Z1 + 1).edges("|Z").fillet(5))
+    # the floor is one closed plate: lid over the load cell at the back, catch tray for stray grounds in front
     body = body.faces("<Z").edges().chamfer(FOOT_CHAMFER)
     # relief: the lid only touches the cell over the free end
     body = body.cut(box(-TRAY_XI-1, FREE_X-7, TRAY_Y0+WALL, TRAY_Y1-WALL, BAR_Z0-1, BAR_Z0+1.5))

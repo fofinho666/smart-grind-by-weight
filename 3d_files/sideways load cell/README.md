@@ -49,7 +49,8 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 - **Funnel seat:** the seat is a 45° funnel with a short straight wall above it. The portafilter drops in from above and centres itself, resting wherever its body is between 61.5 and 73 mm wide. A flat-bottomed head sits near the top of the funnel; a bowl-shaped one sits a little lower.
 - **Nothing touches the rim,** so the height of the head does not matter and there is nothing to adjust.
 - **Ears sit above the cradle** and can be at any angle.
-- **Open front:** the handle passes through a slot at the top, and the front below it is open so spouts are visible and drips fall through.
+- **Open front:** the handle passes through a slot at the top, and the front below it is open so spouts are visible.
+- **Closed floor:** stray grounds collect on the cradle floor. Brush or tip them out now and then; the firmware tares before every grind, so build-up does not affect accuracy.
 - **To use:** lower the portafilter in, handle to the front. Lift it out the same way.
 
 ## Fit and Limits
@@ -57,7 +58,7 @@ An alternative to the cup holder for grinding straight into a 58mm portafilter. 
 - **Portafilter:** any 58mm portafilter with a head up to 72–73 mm wide: spouted or bottomless, any ear layout, any head height.
 - **Rear ear:** an ear pointing directly opposite the handle ends up about 1 mm from the stock cover and may touch it.
 - **Heavy handles:** the cradle supports the head up to 32 mm in front of the basket centre. A portafilter whose balance point is further forward than that (a very heavy handle on a light head) can tip forward.
-- **Weight:** the cradle weighs roughly 35–40 g at 15–20% infill (60 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
+- **Weight:** the cradle weighs roughly 40–45 g at 15–20% infill (70 g printed solid), so a portafilter over roughly 700 g gets close to the 1 kg load cell limit.
 - **Load cell cable:** there is 3 mm between each end of the load cell and the tray wall. The cable leaves through the notch at the fixed-end corner.
 - **Basket position:** the basket centre is 2.5 mm further forward than the stock cup holder, so a 72 mm head clears the cover by about 4 mm.
 - **Overload:** the tray floor sits 1 mm under the free end of the load cell as a downward stop. There is no upward stop.
